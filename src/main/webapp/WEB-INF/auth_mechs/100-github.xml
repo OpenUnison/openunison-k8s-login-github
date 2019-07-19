@@ -1,0 +1,9 @@
+<mechanism name="github">
+    <uri>/auth/github</uri>
+    <className>com.tremolosecurity.unison.proxy.auth.github.GithubAuthMech
+    </className>
+    <init>
+
+    </init>
+    <params />
+</mechanism>
