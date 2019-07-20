@@ -1,0 +1,48 @@
+<chain name="enterprise_idp" level="20" root="o=Data">
+  <authMech>
+    <name>github</name>
+    <required>required</required>
+    <params>
+      <param name="bearerTokenName" value="githubToken" />
+      <param name="clientid" value="#[GITHUB_CLIENT_ID]" />
+      <param name="secretid" value="#[GITHUB_SECRET_ID]" />
+      <param name="scope" value="user:read user:email read:org" />
+      <param name="linkToDirectory" value="false" />
+      <param name="noMatchOU" value="github" />
+      <param name="lookupFilter" value="(uid=${login})" />
+      <param name="uidAttr" value="login" />
+      <param name="defaultObjectClass" value="inetOrgPerson" />
+    </params>
+  </authMech>
+  <authMech>
+        <name>az</name>
+        <required>required</required>
+        <params>
+                <param name="rules" value="custom;github!#[GITHUB_TEAMS]" />
+        </params>
+  </authMech>
+  <authMech>
+    <name>map</name>
+    <required>required</required>
+    <params>
+      <param name="map" value="uid=login" />
+    </params>
+  </authMech>
+  <authMech>
+    <name>jit</name>
+    <required>required</required>
+    <params>
+      <param name="nameAttr" value="uid" />
+      <param name="workflowName" value="jitdb" />
+    </params>
+  </authMech>
+  <authMech>
+    <name>genoidctoken</name>
+    <required>required</required>
+    <params>
+      <param name="idpName" value="k8sIdp" />
+      <param name="trustName" value="kubernetes" />
+
+    </params>
+  </authMech>
+</chain>

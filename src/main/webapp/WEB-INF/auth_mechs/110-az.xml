@@ -1,0 +1,8 @@
+<mechanism name="az">
+    <uri>/auth/az</uri>
+    <className>com.tremolosecurity.proxy.auth.AuthorizationAuthMech</className>
+    <init>
+
+    </init>
+    <params />
+</mechanism>
