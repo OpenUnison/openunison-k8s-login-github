@@ -1,6 +1,6 @@
 # Orchestra Login Portal for GitHub
 
-[![Alt text](https://i.vimeocdn.com/video/735154945_640.webp)](https://vimeo.com/297400302)
+[![Alt text](https://i.vimeocdn.com/video/735154945_640.webp)](https://vimeo.com/349103618)
 
 *Short video of logging into Kubernetes and using kubectl using GitHub*
 
@@ -14,9 +14,9 @@ When a user accesses Kubernetes using Orchestra, they'll access both the login p
 
 ## Watch a Video
 
-This 11 minute video shows the entire deployment and user onboarding process
+This 7 minute video shows the entire deployment and user onboarding process
 
-[![Alt text](https://i.vimeocdn.com/video/735306153_640.webp)](https://vimeo.com/297399119)
+[![Alt text](https://i.vimeocdn.com/video/735306153_640.webp)](https://vimeo.com/349107631)
 
 ## What You Need To Start
 
