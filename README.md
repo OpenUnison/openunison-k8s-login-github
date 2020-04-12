@@ -88,7 +88,7 @@ kind: Secret
 
 ## Deploy OpenUnison
 
-Copy `values.yaml` and update as appropriate:
+Copy `values.yaml` (https://raw.githubusercontent.com/OpenUnison/helm-charts/master/openunison-k8s-login-github/values.yaml) and update as appropriate:
 
 | Property | Description |
 | -------- | ----------- |
