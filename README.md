@@ -26,98 +26,100 @@ Prior to deploying Orchestra you will need:
 2. The Nginx Ingress Controller deployed (https://kubernetes.github.io/ingress-nginx/deploy/)
 3. Client id and secret from a GitHub OAuth2 Application
 4. Deploy the dashboard to your cluster 
+5. helm 3.0+
 
-This installer will create the `openunison` namespace, create certificates for you (including for the dashboard) and the appropriate `CronJob` needed to make sure that certificates are kept updated.
+When creating your GitHub OAuth2 application, the callback URL is `https://host_name/auth/github` where `host_name` is the host you want to use for your login portal.
 
-## Prepare Deployment
+The deployment is a four step process:
 
-Orchestra is driven by a Kubernetes Custom Resource that stores configuration properties.  Secret properties are stored in a source secret.  The deployment tool will create the correct objects for you.  You'll need to create two properties files, one for secret information (such as passwords) and one for non-secret data.  First create a directory for non secret data, ie `/path/to/orchestra-configmaps` and create a file called `input.props` with the below content customized for your environment:
+1. Add Tremolo Security's Helm repo to your own
+2. Deploy the OpenUnison Operator
+3. Create a secret for your Active Directory password
+4. Deploy OpenUnison
 
 
+## Add Tremolo Security's Helm Repo
 
-```properties
-OU_HOST=k8sou.tremolo.lan
-K8S_DASHBOARD_HOST=k8sdb.tremolo.lan
-K8S_URL=https://k8s-installer-master.tremolo.lan:6443
-OU_CERT_OU=k8s
-OU_CERT_O=Tremolo Security
-OU_CERT_L=Alexandria
-OU_CERT_ST=Virginia
-OU_CERT_C=US
-USE_K8S_CM=true
-SESSION_INACTIVITY_TIMEOUT_SECONDS=900
-MYVD_CONFIG_PATH=WEB-INF/myvd.conf
-GITHUB_CLIENT_ID=XXXXXXXXXXXXXX
-GITHUB_TEAMS=MyOrg/
+```
+helm repo add tremolo https://nexus.tremolo.io/repository/helm/
+helm repo update
 ```
 
-Also, place any certificates you want Orchestra to trust in PEM format in `/path/to/orchestra-configmaps`.  Any certificates stored as PEM files will be trusted by Orchestra.
+## Deploy The OpenUnison Operator
 
-Next create a directory for secret information, such as `/path/to/orchestra-secrets` with a file called `input.props` with at least the below information:
-
-
-```properties
-GITHUB_SECRET_ID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-unisonKeystorePassword=start123
+Create your namespace
+```
+kubectl create ns openunison
 ```
 
-*Detailed Description of Non-Secret Properties*
+Deploy the operator
+```
+helm install openunison tremolo/openunison-operator --namespace openunison
+```
 
-| Property | Description |
-| -------- | ----------- |
-| OU_HOST  | The host name for OpenUnison.  This is what user's will put into their browser to login to Kubernetes |
-| K8S_DASHBOARD_HOST | The host name for the dashboard.  This is what users will put into the browser to access to the dashboard. **NOTE:** `OU_HOST` and `K8S_DASHBOARD_HOST` **MUST** share the same DNS suffix. Both `OU_HOST` and `K8S_DASHBOARD_HOST` **MUST** point to OpenUnison |
-| GITHUB_CLIENT_ID | The client id from your GitHub OAuth2 application |
-| GITHUB_TEAMS | A comma separated list of authorized teams and organizations.  An organization is listed in the format `OrgName/` and a team in the formate `OrgName/TeamName` |
-| K8S_URL | The URL for the Kubernetes API server | 
-| OU_CERT_OU | The `OU` attribute for the forward facing certificate |
-| OU_CERT_O | The `O` attribute for the forward facing certificate |
-| OU_CERT_L | The `L` attribute for the forward facing certificate |
-| OU_CERT_ST | The `ST` attribute for the forward facing certificate |
-| OU_CERT_C | The `C` attribute for the forward facing certificate |
-| USE_K8S_CM | Tells the deployment system if you should use k8s' built in certificate manager.  If your distribution doesn't support this (such as Canonical and Rancher), set this to false |
-| SESSION_INACTIVITY_TIMEOUT_SECONDS | The number of seconds of inactivity before the session is terminated, also the length of the refresh token's session |
-| MYVD_CONFIG_PATH | The path to the MyVD configuration file, unless being customized, use `WEB-INF/myvd.conf` |
-| K8S_DASHBOARD_NAMESPACE | **Optional** If specified, the namespace for the dashboard.  For the 1.x dashboard this is `kube-system`, for the 2.x dashboard this is `kubernetes-dashboard` |
-| K8S_CLUSTER_NAME | **Optional** If specified, the name of the cluster to use in the `./kube-config`.  Defaults to `kubernetes` |
+Wait for the operator pod to be available
+```
+watch kubectl get pods -n openunison
+```
 
-*Detailed Description of Secret Properties*
+## Create A Secret For Your Active Directory Password
+
+Create a secret in the `openunison` namespace:
+
+```
+apiVersion: v1
+type: Opaque
+metadata:
+  name: orchestra-secrets-source
+  namespace: openunison
+data:
+  GITHUB_SECRET_ID: aW0gYSBzZWNyZXQ=
+  K8S_DB_SECRET: aW0gYSBzZWNyZXQ=
+  unisonKeystorePassword: aW0gYSBzZWNyZXQ=
+kind: Secret
+```
 
 | Property | Description |
 | -------- | ----------- |
 | GITHUB_SECRET_ID | The secret from your GitHub OAuth2 application |
-| unisonKeystorePassword | The password for OpenUnison's keystore |
+| unisonKeystorePassword | The password for OpenUnison's keystore, should NOT contain an ampersand (`&`) |
+| K8S_DB_SECRET | A random string of characters used to secure the SSO process with the dashboard.  This should be long and random, with no ampersands (`&`) |
 
 
-## Deployment
+## Deploy OpenUnison
 
-Based on where you put the files from `Prepare Deployment`, run the following:
+Copy `values.yaml` (https://raw.githubusercontent.com/OpenUnison/helm-charts/master/openunison-k8s-login-github/values.yaml) and update as appropriate:
 
-```
-curl https://raw.githubusercontent.com/TremoloSecurity/kubernetes-artifact-deployment/master/src/main/bash/deploy_openunison.sh | bash -s /path/to/orchestra-configmaps /path/to/orchestra-secrets https://raw.githubusercontent.com/OpenUnison/openunison-k8s-login-github/master/src/main/yaml/artifact-deployment.yaml
-```
+| Property | Description |
+| -------- | ----------- |
+| network.openunison_host | The host name for OpenUnison.  This is what user's will put into their browser to login to Kubernetes |
+| network.dashboard_host | The host name for the dashboard.  This is what users will put into the browser to access to the dashboard. **NOTE:** `network.openunison_host` and `network.dashboard_host` Both `network.openunison_host` and `network.dashboard_host` **MUST** point to OpenUnison |
+| network.api_server_host | The host name to use for the api server reverse proxy.  This is what `kubectl` will interact with to access your cluster. **NOTE:** `network.openunison_host` and `network.dashboard_host` |
+| network.k8s_url | The URL for the Kubernetes API server | 
+| network.session_inactivity_timeout_seconds | The number of seconds of inactivity before the session is terminated, also the length of the refresh token's session |
+| cert_template.ou | The `OU` attribute for the forward facing certificate |
+| cert_template.o | The `O` attribute for the forward facing certificate |
+| cert_template.l | The `L` attribute for the forward facing certificate |
+| cert_template.st | The `ST` attribute for the forward facing certificate |
+| cert_template.c | The `C` attribute for the forward facing certificate |
+| certs.use_k8s_cm  | Tells the deployment system if you should use k8s' built in certificate manager.  If your distribution doesn't support this (such as Canonical and Rancher), set this to false |
+| myvd_config_path | The path to the MyVD configuration file, unless being customized, use `WEB-INF/myvd.conf` |
+| dashboard.namespace | The namespace for the dashboard.  For the 1.x dashboard this is `kube-system`, for the 2.x dashboard this is `kubernetes-dashboard` |
+| dashboard.cert_name | The name of the secret in the dashboard's namespace that stores the certificate for the dashboard |
+| dashboard.label | The label of the dashboard pod, this is used to delete the pod once new certificates are generated |
+| dashboard.service_name | The name of the service object for the dashboard |
+| k8s_cluster_name | The name of the cluster to use in the `./kube-config`.  Defaults to `kubernetes` |
+| image | The name of the image to use |
+| enable_impersonation | If `true`, OpenUnison will run in impersonation mode.  Instead of OpenUnison being integrated with Kubernetes via OIDC, OpenUnison will be a reverse proxy and impersonate users.  This is useful with cloud deployments where oidc is not an option |
+| monitoring.prometheus_service_account | The prometheus service account to authorize access to the /monitoring endpoint |
+| github.client_id | The client id from your OAuth2 application configuration |
+| github.teams | A comma separated list of authorized teams and organizations.  An organization is listed in the format `OrgName/` and a team in the formate `OrgName/TeamName` |
 
-The output will look like:
 
-```
-namespace/openunison-deploy created
-configmap/extracerts created
-secret/input created
-clusterrolebinding.rbac.authorization.k8s.io/artifact-deployment created
-job.batch/artifact-deployment created
-NAME                        READY     STATUS    RESTARTS   AGE
-artifact-deployment-jzmnr   0/1       Pending   0          0s
-artifact-deployment-jzmnr   0/1       Pending   0         0s
-artifact-deployment-jzmnr   0/1       ContainerCreating   0         0s
-artifact-deployment-jzmnr   1/1       Running   0         4s
-artifact-deployment-jzmnr   0/1       Completed   0         15s
-```
+Finally, run the helm chart:
 
-Once you see `Completed`, you can exit the script (`Ctl+C`).  This script will import the OpenUnison operator, create the appropriate Custom Resource Definitions and finally deploy a custom resource based on your configuration.  Once the custom resource is deployed the OpenUnison operator will deploy Orchestra for you.
+`helm install orchestra tremolo/openunison-k8s-login-github --namespace openunison -f /path/to/values.yaml`
 
-## Using Your Own Certificate for TLS
-
-The operator deploys a self signed certificate for use by the ingress when accessing OpenUnison and the Kubernetes Dashboard.  In order to use your own certificate, replace the `ou-tls-certificate` TLS secret in the `openunison` namespace with your own certificate and private key.  ***NOTE:***  this certificate has entries for both the dashboard and Orchestra so any certificate will need to be able to handle both URLs.
 
 ## Complete SSO Integration with Kubernetes
 
@@ -172,20 +174,21 @@ roleRef:
 2.  Difficult to remove access - Same reason as #1, you need to figure out every role binding a user is a member of to remove
 3.  Easy to get wrong - If you mistype a user's login id Kubernetes won't tell you
 
-If you can't use Active Directory groups, take a look at the OpenUnison Identity Manager for Kubernetes - https://github.com/TremoloSecurity/openunison-qs-kubernetes/tree/activedirectory.  This tool adds on to the login capabilities with the ability to manage access to the cluster and namespaces, along with providing a self service way for users to request new namespaces and manage access.
+# Using Your Own Certificates
+
+If you want to integrate your own certificates see our wiki entry - https://github.com/TremoloSecurity/OpenUnison/wiki/troubleshooting#how-do-i-change-openunisons-certificates
+
+# Monitoring OpenUnison
+
+This deployment comes with a `/metrics` endpoint for monitoring.  For details on how to integrate it into a Prometheus stack - https://github.com/TremoloSecurity/OpenUnison/wiki/troubleshooting#how-do-i-monitor-openunison-with-prometheus.
+
+# Trouble Shooting Help
+
+Please take a look at https://github.com/TremoloSecurity/OpenUnison/wiki/troubleshooting if you're running into issues.  If there isn't an entry there that takes care of your issue, please open an issue on this repo.
 
 # Whats next?
 
 Now you can begin mapping OpenUnison's capabilities to your business and compliance needs.  For instance you can add multi-factor authentication with TOTP or U2F, Create privileged workflows for onboarding, scheduled workflows that will deprovision users, etc.
-
-# Updating Secrets and Certificates
-
-To update any of the secrets in the source secret:
-
-1. Update the `orchestra-secrets-source` secret in the `openunison` namespace as appropriate
-2. Add an annotation (or edit an existing one) on the `orchestra` `openunison` object in the `openunison` namespace
-
-This will trigger the operator to update your OpenUnison pods.  To update certificates or non-secret data, just update it in the `orchestra` `openunison` object.
 
 # Customizing Orchestra
 
