@@ -159,7 +159,7 @@ Run `kubectl describe configmap api-server-config -n openunison` to get the SSO 
 
 ## First Login
 
-To login, open your browser and go to the host you specified for `OU_HOST` in your `input.props`.  For instance if `OU_HOST` is `k8sou.tremolo.lan` then navigate to https://k8sou.tremolo.lan.  You'll be prompted for your Active Directory username and password.  Once authenticated you'll be able login to the portal and generate your `.kube/config` from the Tokens screen.
+To login, open your browser and go to the host you specified for `OU_HOST` in your `input.props`.  For instance if `OU_HOST` is `k8sou.tremolo.lan` then navigate to https://k8sou.tremolo.lan.  You'll be prompted for your github username and password.  Once authenticated you'll be able login to the portal and generate your `.kube/config` from the Tokens screen.
 
 ## CLI Login
 
@@ -222,7 +222,7 @@ roleRef:
 2.  Difficult to remove access - Same reason as #1, you need to figure out every role binding a user is a member of to remove
 3.  Easy to get wrong - If you mistype a user's login id Kubernetes won't tell you
 
-If you can't use Active Directory groups, take a look at the OpenUnison Identity Manager for Kubernetes - https://github.com/TremoloSecurity/openunison-qs-kubernetes/tree/activedirectory.  This tool adds on to the login capabilities with the ability to manage access to the cluster and namespaces, along with providing a self service way for users to request new namespaces and manage access.
+If you can't use github orgnization and teams, take a look at the OpenUnison Identity Manager for Kubernetes - https://github.com/TremoloSecurity/openunison-qs-kubernetes/tree/activedirectory.  This tool adds on to the login capabilities with the ability to manage access to the cluster and namespaces, along with providing a self service way for users to request new namespaces and manage access.
 
 # Adding Applications and Clusters for Authentication
 
